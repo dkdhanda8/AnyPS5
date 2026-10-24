@@ -166,7 +166,7 @@ private:
             if (head == 0 && _end(last) - _address(start) >= kJmpRel32.Size)
                 head = static_cast<std::size_t>(_end(last) - _address(start));
             const auto island = _address(start) + head;
-            const auto reach = static_cast<std::int64_t>(island) - static_cast<std::int64_t>(_address(index) + kShortJumpSize);
+            const auto reach = static_cast<std::int64_t>(island - (_address(index) + kShortJumpSize));
             if (head != 0 && (reach < std::numeric_limits<std::int8_t>::min() || reach > std::numeric_limits<std::int8_t>::max()))
                 return std::nullopt;
             if (head != 0 && _end(last) >= island + kJmpRel32.Size) {
@@ -200,9 +200,9 @@ private:
         placement.Sites.push_back(_site(windowStart, head, moved.Finish()));
 
         StubBodyBuilder lowered;
-        lowered.Seek(static_cast<std::int64_t>(store) - static_cast<std::int64_t>(island));
+        lowered.Seek(static_cast<std::int64_t>(store - island));
         _matcher.EmitOutOfLine(lowered, _bytes(index));
-        lowered.JumpTo(static_cast<std::int64_t>(_end(index)) - static_cast<std::int64_t>(island));
+        lowered.JumpTo(static_cast<std::int64_t>(_end(index) - island));
         placement.Sites.push_back(_site(island, kJmpRel32.Size, lowered.Finish()));
         placement.ReplacementLength = placement.Sites.back().Body.size();
         placement.Claimed.push_back(index);
@@ -210,7 +210,7 @@ private:
         const auto offset = _matches[index].Offset;
         std::fill_n(_seg.begin() + static_cast<std::ptrdiff_t>(offset), _matches[index].Length, Amd64OnlySubstitutionTable::kTrapFill);
         _seg[offset] = X64OpcodeConstants::OneByteJmpRel8;
-        _seg[offset + 1] = static_cast<std::uint8_t>(static_cast<std::int8_t>(static_cast<std::int64_t>(island) - static_cast<std::int64_t>(store + kShortJumpSize)));
+        _seg[offset + 1] = static_cast<std::uint8_t>(static_cast<std::int8_t>(static_cast<std::int64_t>(island - (store + kShortJumpSize))));
         return placement;
     }
 };

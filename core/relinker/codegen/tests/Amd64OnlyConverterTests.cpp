@@ -483,6 +483,20 @@ Domain::ProgramHeader segmentHeader(const std::uint64_t size) {
     return {1, 5, 0x200, 0x1000, 0, size, size, 16};
 }
 
+void converterIslandReachAcrossInt64Max() {
+    const auto converter = Codegen::MakeAmd64OnlyConverter(Codegen::Amd64OnlyTarget::Rosetta);
+    Bytes file(0x300, 0xCC);
+    const Bytes text = {
+        0xB8, 0x90, 0x90, 0x90, 0x90,
+        0x90, 0x90, 0x90, 0x90, 0x90,
+        0xC3,
+        0xC5, 0xFD, 0x11, 0x00};
+    std::copy(text.begin(), text.end(), file.begin() + 0x200);
+    const Domain::ProgramHeader acrossInt64Max{1, 5, 0x200, 0x7FFFFFFFFFFFFFF5, 0, 15, 15, 16};
+    const auto result = converter->Convert(file, {acrossInt64Max});
+    require(result.Trampolines.size() == 2, "Island placement for a segment mapped across 2^63 did not reuse the slot before the store");
+}
+
 void converterSegment() {
     const auto converter = Codegen::MakeAmd64OnlyConverter();
     const auto file = segmentFixture();
@@ -2151,6 +2165,7 @@ int main() {
         rdpruExecution();
         mcommitExecution();
         converterSegment();
+        converterIslandReachAcrossInt64Max();
         converterRipRelativeFollower();
         converterSha256();
         converterSha1();
